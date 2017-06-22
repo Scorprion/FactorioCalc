@@ -14,7 +14,7 @@ Time to make: 4 seconds
 		1 x Iron Plate (0.44 x Electric Furnace)					
 			1 x Iron Ore (0.5 x Electric Mining Drill)				
 ______________________________________________________
-				      Qty | Time(sec)									  Speed x || Machine
+				      Qty | Time(sec)				Speed x || Machine
 SP1 = Science Pack 1 || 1 || 5 || "1 x Copper Plate || 1 x Iron Gear Wheel"	0.75 <-- Assembling machine 2
 
     if (!time) {
@@ -105,19 +105,3 @@ function splitIngredients(ingredientsString) {
     }
     return ingredients;
 }
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
