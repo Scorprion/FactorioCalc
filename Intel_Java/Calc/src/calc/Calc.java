@@ -1,5 +1,7 @@
 package calc;
 
+import bsh.EvalError;
+import bsh.Interpreter;
 import javafx.application.Application;
 import javafx.application.Platform;
 import javafx.beans.value.ChangeListener;
@@ -30,12 +32,22 @@ import javafx.scene.text.FontWeight;
 import javafx.scene.text.Text;
 import javafx.stage.Stage;
 
+import javax.script.ScriptEngine;
+import javax.script.ScriptEngineManager;
+import javax.script.ScriptException;
+import javax.script.SimpleBindings;
+import java.util.HashMap;
+import java.util.Map;
+
 public class Calc extends Application {
 
-    Stage window;
-    Scene scene;
-    String item;
+    private Stage window;
+    private Scene scene;
+    private String item;
     public static int selection;
+    public db DB = new db();
+    public String ct;
+    public double ct2, ct3;
 
     public static void main(String[] args)
     {
@@ -66,6 +78,7 @@ public class Calc extends Application {
 
         Button closebutton = new Button("Exit");
         closebutton.setTextFill(Color.RED);
+        closebutton.setFont(Font.font("Ubuntu", FontWeight.BOLD, 12));
         closebutton.setPrefSize(80, 10);
         grid.add(closebutton, 1, 10);
 
@@ -88,8 +101,21 @@ public class Calc extends Application {
         sp.setVbarPolicy(ScrollBarPolicy.ALWAYS);
         VBox.setVgrow(sp, Priority.ALWAYS);
 
+        //text areas
+        final TextField inamount = new TextField();
+        //faded-out gray background text
+        inamount.setPromptText("Amount of it");
+        inamount.setMaxSize(200, 20);
+        grid.add(inamount, 0, 2);
+
+        final TextField intime = new TextField();
+        intime.setPromptText("Amount per second(s)");
+        intime.setMaxSize(200, 20);
+        grid.add(intime, 0, 3);
+
         final ComboBox comboBox = new ComboBox();
         comboBox.getItems().addAll(
+                "--Select--",
                 "Science Pack 1",
                 "Science Pack 2",
                 "Science Pack 3",
@@ -106,6 +132,32 @@ public class Calc extends Application {
             @Override
             public void changed(ObservableValue ov, String t, String t1) {
                 item = t1;
+                ct = DB.getCt();
+                double ct1 = Integer.parseInt(ct);
+                ct2 = ct1 * 0.75;
+                ct3 = ct1 * 1.25;
+                switch (item) {
+                    case "Science Pack 1":
+                        intime.setPromptText("Amount per second(s) (default: " + ct1 + ", " + ct2 + ", or " + ct3 + ")");
+                        break;
+                    case "Science Pack 2":
+                        intime.setPromptText("Amount per second(s) (default: " + ct1 + ", " + ct2 + ", or " + ct3 + ")");
+                        break;
+                    case "Science Pack 3":
+                        intime.setPromptText("Amount per second(s) (default: " + ct1 + ", " + ct2 + ", or " + ct3 + ")");
+                        break;
+                    case "Iron Plate":
+                        intime.setPromptText("Amount per second(s) (default: " + ct1 + ", " + ct2 + ", or " + ct3 + ")");
+                        break;
+                    case "Copper Plate":
+                        intime.setPromptText("Amount per second(s) (default: " + ct1 + ", " + ct2 + ", or " + ct3 + ")");
+                        break;
+                    case "--Select--":
+                        intime.setPromptText("Amount per second(s) (default: " + ct1 + ", " + ct2 + ", or " + ct3 + ")");
+                        break;
+                    default:
+                        intime.setPromptText("Amount per second(s)");
+                }
             }
         });
 
@@ -113,18 +165,6 @@ public class Calc extends Application {
         		"Iron Plate", "Copper Plate" };
         JList list = new JList(items);
         list.setVisibleRowCount(3);*/
-
-        //text areas
-        final TextField inamount = new TextField();
-        //faded-out gray background text
-        inamount.setPromptText("Amount of it");
-        inamount.setMaxSize(100, 20);
-        grid.add(inamount, 0, 2);
-
-        final TextField intime = new TextField();
-        intime.setPromptText("Get this amount per (seconds)");
-        intime.setMaxSize(100, 20);
-        grid.add(intime, 0, 3);
 
         final TextArea output = new TextArea();
         output.setEditable(false);
@@ -180,7 +220,10 @@ public class Calc extends Application {
         button.setOnAction(new EventHandler<ActionEvent>() {
             @Override
             public void handle(ActionEvent event) {
-                System.out.println(db.getMsg());
+                ScriptEngine engine = new ScriptEngineManager().getEngineByName("JavaScript");
+                Map<String, Object> tehmap = new HashMap<String, Object>();
+                String iden = DB.getIdent();
+                String db = DB.getEquat();
                 int time = 0, amount = 0;
                 String storage = new String();
                 try
@@ -189,16 +232,14 @@ public class Calc extends Application {
                     amount = Integer.parseInt(storage);
                     storage = intime.getText();
                     time = Integer.parseInt(storage);
-                    System.out.println(amount + " and " + time);
                     //catching the exception with a variable (var) called "ex"
-                } catch (java.lang.NumberFormatException ex) {
+                } catch (NumberFormatException ex) {
                     label.setText("Error. Amount and time are both required.");
                 }
-                System.out.println("Item = " + item);
                 label.setText(item);
                 try {
                     storage = amgroup.getSelectedToggle().getUserData().toString();
-                } catch (java.lang.NullPointerException ex) {
+                } catch (NullPointerException ex) {
                     System.err.println("Caught Exception: " + ex.getMessage());
                 }
                 double crafter = 0, smelter = 0, result = 0, IronPlate = 0, CopperPlate = 0, var1 = 0, var2 = 0, var3 = 0, var4 = 0;
@@ -206,51 +247,67 @@ public class Calc extends Application {
                 {
                     case "Assembly Machine 1":
                         output.appendText("\nAssembly Machine 1");
-                        crafter = 0.5;
+                        tehmap.put("crafter", 0.5);
+                        //crafter = 0.5;
                         break;
                     case "Assembly Machine 2":
                         output.appendText("\nAssembly Machine 2");
-                        crafter = 0.75;
+                        //crafter = 0.75;
                         break;
                     case "Assembly Machine 3":
                         output.appendText("\nAssembly Machine 3");
-                        crafter = 1.25;
+                        //crafter = 1.25;
                         break;
                     default:
                         //will be the same as "AS3"
                         output.appendText("\nDefault");
-                        crafter = 1.25;
+                        //crafter = 1.25;
                 }
                 try {
                     storage = fgroup.getSelectedToggle().getUserData().toString();
-                } catch (java.lang.NullPointerException ex) {
+                } catch (NullPointerException ex) {
                     System.err.println("Error, put an input for a furnace.");
                 }
                 switch (storage)
                 {
                     case "Stone Furnace":
                         output.appendText("\nStone Furnace");
-                        smelter = 1;
+                        tehmap.put("smelter", 1);
+                        //smelter = 1;
                         break;
                     case "Steel Furnace":
                         output.appendText("\nSteel Furnace");
-                        smelter = 2;
+                        tehmap.put("smelter", 2);
+                        //smelter = 2;
                         break;
                     case "Electric Furnace":
                         output.appendText("\nElectric Furnace");
-                        smelter = 2;
+                        tehmap.put("smelter", 2);
+                        //smelter = 2;
                         break;
                     default:
                         output.appendText("\nDefault");
+                        tehmap.put("smelter", 2);
                 }
                 switch (item)
                 {
+                    case "--Select--":
+                        output.setText("");
+                        output.appendText("Please enter a valid item.");
+                        break;
                     case "Science Pack 1":
                         selection = 1;
                         output.appendText("\nScience Pack 1");
-                        var1 = amount * 0.5;
+                        try {
+                            System.out.println("result = "+ engine.eval(db, new SimpleBindings(tehmap)) + " from "
+                            + iden);
+                        } catch (ScriptException e) {
+                            e.printStackTrace();
+                        }
+
+                        /*var1 = amount * 0.5;
                         CopperPlate = amount * 0.44;
-                        result = amount * 5 / crafter;
+                        result = amount * 5 / crafter;*/
                         break;
                     case "Science Pack 2":
                         selection = 2;

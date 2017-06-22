@@ -3,16 +3,19 @@ package calc;
 import java.sql.*;
 
 public class db {
-    public static String msg;
-    public static void main() {
-        ResultSet fac = getFactorio();
+    public static String ident;
+    public static String equat;
+    public static String ct;
+    public db() {
+        ResultSet fac = getfactorio();
         try {
             while (fac.next())
             {
-                Factorio f = getFactorio(fac);
-                String msg = Integer.toString(f.id);
-                msg += ": " + f.item_name;
-                msg += " = " + f.equation;
+                Item f = getfactorio(fac);
+                ident = Integer.toString(f.Id);
+                ident += ": " + f.ItemName;
+                equat = f.Equation;
+                ct = Integer.toString(f.Ct);
             }
         }
         catch (SQLException e)
@@ -20,12 +23,12 @@ public class db {
             System.out.println(e.getMessage());
         }
     }
-    private static ResultSet getFactorio() {
+    private static ResultSet getfactorio() {
         Connection con = getConnection();
         try {
             Statement s = con.createStatement();
-            String select = "SELECT id, item_name, equation "
-                    + "FROM Items WHERE id = " + Calc.getSelection();
+            String select = "SELECT id, item_name, equation, ct "
+                    + "FROM Items WHERE id = 1";
             ResultSet rows;
             rows = s.executeQuery(select);
             return rows;
@@ -42,54 +45,51 @@ public class db {
         try
         {
             Class.forName("com.mysql.jdbc.Driver");
-            String url = "jdbc:mysql://localhost/Factorio?useSSL=false";
+            String url = "jdbc:mysql://localhost/factorio?useSSL=false";
             String user = "root";
             String pw = "nuri2105";
             con = DriverManager.getConnection(url, user, pw);
         }
         catch (ClassNotFoundException e)
         {
+            System.out.println("Class not found Exception");
             System.out.println(e.getMessage());
             System.exit(0);
         }
         catch (SQLException e)
         {
+            System.out.println("SQL Exception");
             System.out.println(e.getMessage());
             System.exit(0);
         }
         return con;
     }
 
-    private static Factorio getFactorio(ResultSet fac) {
+    private static Item getfactorio(ResultSet fac) {
         try
         {
             int id = fac.getInt("id");
             String item_name = fac.getString("item_name");
             String equation = fac.getString("equation");
+            int ct = fac.getInt("ct");
             //forgot last time
-            return new Factorio(id, item_name, equation);
+            return new Item(id, item_name, equation, ct);
         }
-        catch (SQLException e)
-        {
-            System.out.println(e.getMessage());
+        catch (SQLException e) {
+            System.err.println("Something went wrong D:");
+            System.err.println(e.getMessage());
         }
         return null;
     }
 
-    private static class Factorio {
-        public String item_name;
-        public String equation;
-        public int id;
-        public Factorio(int id, String item_name, String equation) {
-            this.id = id;
-            this.item_name = item_name;
-            this.equation = equation;
-        }
+    public static String getIdent() { return ident; }
+    public static void setIdent(String m) {
+        ident = m;
     }
-    public static String getMsg() {
-        return msg;
+    public static String getEquat() {
+        return equat;
     }
-    public static void setMsg(String m) {
-        msg = m;
-    }
+    public static void setEquat(String e) { equat = e; }
+    public static String getCt() { return ct; }
+    public static void setCt(String c) { ct = c; }
 }

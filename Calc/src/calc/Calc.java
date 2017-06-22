@@ -78,9 +78,6 @@ public class Calc extends Application {
         /* you can add something like 
         "scrollpane.setVbarPolicy(ScrollBarPolicy.NEVER);"
         ("scrollpane" being the name) to not allow use of that scroll */
-        ScrollPane scrollpane = new ScrollPane();
-        scrollpane.setHbarPolicy(ScrollBarPolicy.AS_NEEDED);
-        scrollpane.setVbarPolicy(ScrollBarPolicy.ALWAYS);
         
         ScrollPane sp = new ScrollPane();
         sp.setContent(grid);
