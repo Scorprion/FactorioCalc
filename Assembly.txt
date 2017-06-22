@@ -1,0 +1,123 @@
+						
+vars: RIron, RCopper, RFurnace, RMining, RCrafting, amount, time, crafterspeed(cs), defaulttime(or dtime), 
+crafternumber(cn)(eg: if it was Assembling Machine 2, then the number would be 2), var1, var2, var3, var4, var5  	
+
+SP1
+
+default values
+----------------------
+Time to make: 4 seconds							
+1 x Science Pack 1 (1 x Assembling machine 3)							
+	1 x Copper Plate (0.44 x Electric Furnace)						
+		1 x Copper Ore (0.5 x Electric Mining Drill)					
+	1 x Iron Gear Wheel (0.1 x Assembling machine 3)						
+		1 x Iron Plate (0.44 x Electric Furnace)					
+			1 x Iron Ore (0.5 x Electric Mining Drill)				
+______________________________________________________
+				      Qty | Time(sec)									  Speed x || Machine
+SP1 = Science Pack 1 || 1 || 5 || "1 x Copper Plate || 1 x Iron Gear Wheel"	0.75 <-- Assembling machine 2
+
+    if (!time) {
+        time = item.time / item.speedMultiplier;
+    }
+
+var assemblers = (amount/time) / (item.quantity/(item.time/item.speedMultiplier)
+
+row[offset] = Math.round(amount * 100) / 100 + 
+" x " + item.name + " (" + Math.round(assemblers * 100) / 100 + " x " + item.machine + ")";
+
+function itemByName(name) {
+    var sheet = SpreadsheetApp.getActiveSpreadsheet().getSheetByName("Items");
+    var items = sheet.getSheetValues(1, 2, sheet.getLastRow(), 1);
+    for (var i = 0; i < items.length; i++) {
+        if (items[i][0].toString().toLowerCase() == name.toLowerCase()) {
+            return itemByRow(i + 1);
+        }
+
+function itemByRow(rowIndex) {
+    var sheet = SpreadsheetApp.getActiveSpreadsheet().getSheetByName("Items");
+    var values = sheet.getSheetValues(rowIndex, 2, 1, 6)[0];
+    if (values[1] - 0 == 0 || isNaN(values[1] - 0)) {
+        return null;
+    }
+    if (values[3]) {
+        var ingredients = splitIngredients(values[3]);
+    } else {
+        var ingredients = [];
+    }
+    return {
+        name: values[0],
+        quantity: values[1],
+        time: values[2],
+        ingredients: ingredients,
+        speedMultiplier: values[4],
+        machine: values[5]
+    };
+}
+
+var item = selectedItem();
+
+    if (!amount) {
+        amount = item.quantity;
+    }
+
+	var totals = {};
+    appendAssemblerRecursive(sheet, item, amount, time, 1, totals);
+    sheet.appendRow(["", "Total:"]);
+    for (name in totals) {
+        appendAssembler(sheet, itemByName(name), totals[name], time, 1);
+    }
+	
+appendAssemblerRecursive(sheet, itemByName(item.ingredients[i].name), (item.ingredients[i].amount / item.quantity) * amount, time, offset + 1, totals);
+	
+    appendAssembler(sheet, item, amount, time, offset);
+    totals[item.name] = (totals[item.name] || 0) + amount;
+    for (var i = 0; i < item.ingredients.length; i++) {
+        appendAssemblerRecursive(sheet, itemByName(item.ingredients[i].name), (item.ingredients[i].amount / item.quantity) * amount, time, offset + 1, totals);
+    }
+	
+	function appendAssembler(sheet, item, amount, time, offset) {
+    var assemblers = (amount / time) / (item.quantity / (item.time / item.speedMultiplier));
+    var row = [];
+    for (var i = 0; i < offset; i++) {
+        row[i] = "";
+    }
+    row[offset] = Math.round(amount * 100) / 100 + " x " + item.name + " (" + Math.round(assemblers * 100) / 100 + " x " + item.machine + ")";
+    sheet.appendRow(row);
+}
+
+    var sheet = SpreadsheetApp.getActiveSpreadsheet().getSheetByName("Items");
+    var items = sheet.getSheetValues(1, 2, sheet.getLastRow(), 1);
+    for (var i = 0; i < items.length; i++) {
+        if (items[i][0].toString().toLowerCase() == name.toLowerCase()) {
+            return itemByRow(i + 1);
+        }
+    }
+	
+function splitIngredients(ingredientsString) {
+    var ingredients = ingredientsString.split("\n");
+    for (var i = 0; i < ingredients.length; i++) {
+        var parts = ingredients[i].split(" x ");
+        ingredients[i] = {
+            amount: parts[0],
+            name: parts[1]
+        }
+    }
+    return ingredients;
+}
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
