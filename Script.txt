@@ -1,0 +1,234 @@
+/**
+ * @OnlyCurrentDoc
+ */
+
+function assemblers() {
+  var item = selectedItem();
+  if (item) {
+    calculateAssemblers(item);
+  }
+}
+
+function selectedItem() {
+  var spreadsheet = SpreadsheetApp.getActiveSpreadsheet();
+  var sheet = spreadsheet.getSheetByName("Items");
+  var cell = sheet.getActiveCell();
+  var item = itemByRow(cell && cell.getRowIndex() || 0);
+  if (!item) {
+    Browser.msgBox("First select an item in the Items sheet.");
+    return null;
+  } else {
+    return item;
+  }
+}
+
+function calculateAssemblers(item) {
+  var spreadsheet = SpreadsheetApp.getActiveSpreadsheet();
+  var sheet = spreadsheet.getSheetByName("Calculations");
+  var amount = Browser.inputBox("How many " + item.name + " do you want to make? Default: " + item.quantity);
+  if (!amount) {
+    amount = item.quantity;
+  }
+  var time = Browser.inputBox("How many seconds do you want to spend making " + amount + " x " + item.name +"? Default: " + item.time/item.speedMultiplier + " seconds");
+  if (!time) {
+    time = item.time/item.speedMultiplier;
+  }
+  sheet.activate();
+  sheet.appendRow(["", "----------"]);
+  sheet.getRange(sheet.getLastRow(), 1).activate();
+  sheet.appendRow(["", "Time to make: " + time + " seconds"]);
+  var totals = {};
+  appendAssemblerRecursive(sheet, item, amount, time, 1, totals);
+  sheet.appendRow(["", "Total:"]);
+  for (name in totals) {
+    appendAssembler(sheet, itemByName(name), totals[name], time, 1);
+  }
+}
+
+function appendAssemblerRecursive(sheet, item, amount, time, offset, totals) {
+  if (offset > 20) {
+    throw new Error("Item stack too deep for " + item.name + ". You probably have a recursive item dependency.");
+  }
+  sheet.setColumnWidth(offset+1, 50);
+  appendAssembler(sheet, item, amount, time, offset);
+  totals[item.name] = (totals[item.name] || 0) + amount;
+  for (var i = 0; i < item.ingredients.length; i++) {
+    appendAssemblerRecursive(sheet, itemByName(item.ingredients[i].name), (item.ingredients[i].amount/item.quantity)*amount, time, offset+1, totals);
+  }
+}
+
+function appendAssembler(sheet, item, amount, time, offset) {
+  var assemblers = (amount/time) / (item.quantity/(item.time/item.speedMultiplier));
+  var row = [];
+  for (var i = 0; i < offset; i++) {
+    row[i] = "";
+  }
+  row[offset] = Math.round(amount*100)/100 + " x " + item.name + " (" + Math.round(assemblers*100)/100 + " x " + item.machine + ")";
+  sheet.appendRow(row);
+}
+
+function itemByName(name) {
+  var sheet = SpreadsheetApp.getActiveSpreadsheet().getSheetByName("Items");
+  var items = sheet.getSheetValues(1, 2, sheet.getLastRow(), 1);
+  for (var i = 0; i < items.length; i++) {
+    if (items[i][0].toString().toLowerCase() == name.toLowerCase()) {
+      return itemByRow(i+1);
+    }
+  }
+  throw new Error("Unknown item: " + name);
+}
+
+function itemByRow(rowIndex) {
+  var sheet = SpreadsheetApp.getActiveSpreadsheet().getSheetByName("Items");
+  var values = sheet.getSheetValues(rowIndex, 2, 1, 6)[0];
+  if (values[1]-0 == 0 || isNaN(values[1]-0)) {
+    return null;
+  }
+  if (values[3]) {
+    var ingredients = splitIngredients(values[3]);
+  } else {
+    var ingredients = [];
+  }
+  return {name: values[0], quantity: values[1], time: values[2], ingredients: ingredients, speedMultiplier: values[4], machine: values[5]};
+}
+
+function splitIngredients(ingredientsString) {
+  var ingredients = ingredientsString.split("\n");
+  for (var i = 0; i < ingredients.length; i++) {
+    var parts = ingredients[i].split(" x ");
+    ingredients[i] = {amount: parts[0], name: parts[1]}
+  }
+  return ingredients;
+}
+
+function ratios() {
+  var item = selectedItem();
+  if (item) {
+    calculateRatios(item);
+  }
+}
+
+function calculateRatios(item) {
+  var spreadsheet = SpreadsheetApp.getActiveSpreadsheet();
+  var sheet = spreadsheet.getSheetByName("Calculations");
+  sheet.activate();
+  sheet.appendRow(["", "----------"]);
+  sheet.getRange(sheet.getLastRow(), 1).activate();
+  var items = [item];
+  gatherItemsRecursive(item, items);
+  appendRatios(sheet, items);
+}
+
+function gatherItemsRecursive(item, items) {
+  for (var i = 0; i < item.ingredients.length; i++) {
+    var ingredient = itemByName(item.ingredients[i].name);
+    if (!containsItem(items, ingredient) && ingredient.ingredients.length > 0) {
+      items.push(ingredient);
+      gatherItemsRecursive(ingredient, items);
+    }
+  }
+}
+
+function containsItem(items, item) {
+  for (var i = 0; i < items.length; i++) {
+    if (items[i].name == item.name) {
+      return true;
+    }
+  }
+  return false;
+}
+
+function appendRatios(sheet, items) {
+  for (var i = 0; i < items.length; i++) {
+    var item = items[i];
+    sheet.appendRow(["", item.name + " (" + item.machine + ")"]);
+    for (var j = 0; j < item.ingredients.length; j++) {
+      var ingredient = itemByName(item.ingredients[j].name);
+      appendRatio(sheet, item, ingredient, item.ingredients[j].amount);
+    }
+  }
+}
+
+
+function appendRatio(sheet, item, ingredient, ingredientAmount) {
+  var itemsPerSecond = 1/(item.time/item.speedMultiplier);
+  var ingredientsPerSecond = ingredient.quantity/(ingredient.time/ingredient.speedMultiplier) / ingredientAmount;
+  if (itemsPerSecond < ingredientsPerSecond) {
+    itemsPerSecond = ingredientsPerSecond / itemsPerSecond;
+    ingredientsPerSecond = 1;
+  } else {
+    ingredientsPerSecond = itemsPerSecond / ingredientsPerSecond;
+    itemsPerSecond = 1;
+  }
+  var text = Math.round(itemsPerSecond*100)/100 + " to " + Math.round(ingredientsPerSecond*100)/100 + " x " + ingredient.name + " (" + ingredient.machine + ")"
+  sheet.appendRow(["", "", text]);
+}
+
+function recipes() {
+  var item = selectedItem();
+  if (item) {
+    recipesUsingItem(item);
+  }
+}
+
+function recipesUsingItem(selectedItem) {
+  var spreadsheet = SpreadsheetApp.getActiveSpreadsheet();
+  var sheet = spreadsheet.getSheetByName("Items");
+  var recipeNames = [];
+  for (var i = 0; i < sheet.getLastRow(); i++) {
+    var item = itemByRow(i+1);
+    if (item) {
+      for (var j = 0; j < item.ingredients.length; j++) {
+        if (item.ingredients[j].name == selectedItem.name) {
+          recipeNames.push(item.name);
+        }
+      }
+    }
+  }
+  Browser.msgBox("Recipes using " + selectedItem.name + ": " + recipeNames.join(", "));
+}
+
+function changeMachines() {
+  changeAssemblingMachine();
+  changeFurnace();
+}
+
+function replaceMachine(find, replace, speedMultiplier) {
+  var ui = SpreadsheetApp.getUi();
+  var response = ui.alert("Are you sure you want to replace all \"" + find + "\" machines with \"" + replace + "\" and their \"Speed x\" with " + speedMultiplier +"?", ui.ButtonSet.OK_CANCEL);
+  if (response == ui.Button.OK) {
+    var sheet = SpreadsheetApp.getActiveSpreadsheet().getSheetByName("Items");
+    for (var i = 0; i < sheet.getLastRow(); i++) {
+      if (sheet.getSheetValues(i+1, 7, 1, 1)[0][0].indexOf(find) > -1) {
+        sheet.getRange(i+1, 7).setValue(replace);
+        sheet.getRange(i+1, 6).setValue(speedMultiplier);
+      }
+    }
+  }
+}
+
+function switchAssemblingMachine1() { replaceMachine("Assembling", "Assembling machine 1", 0.5) }
+function switchAssemblingMachine2() { replaceMachine("Assembling", "Assembling machine 2", 0.75) }
+function switchAssemblingMachine3() { replaceMachine("Assembling", "Assembling machine 3", 1.25) }
+
+function switchStoneFurnace() { replaceMachine("Furnace", "Stone Furnace", 1) }
+function switchSteelFurnace() { replaceMachine("Furnace", "Steel Furnace", 2) }
+function switchElectricFurnace() { replaceMachine("Furnace", "Electric Furnace", 2) }
+
+function onOpen() {
+  var ui = SpreadsheetApp.getUi();
+  ui.createMenu("Factorio")
+      .addItem("Assembly for Selected Item", "assemblers")
+      .addItem("Ratios for Selected Item", "ratios")
+      .addItem("Recipes using Selected Item", "recipes")
+      .addSeparator()
+      .addSubMenu(ui.createMenu("Switch Machines")
+          .addItem("Assembling machine 1", "switchAssemblingMachine1")
+          .addItem("Assembling machine 2", "switchAssemblingMachine2")
+          .addItem("Assembling machine 3", "switchAssemblingMachine3")
+          .addSeparator()
+          .addItem("Stone Furnace", "switchStoneFurnace")
+          .addItem("Steel Furnace", "switchSteelFurnace")
+          .addItem("Electric Furnace", "switchElectricFurnace"))
+      .addToUi();
+}
